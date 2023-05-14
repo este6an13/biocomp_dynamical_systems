@@ -1,0 +1,157 @@
+---
+title: "Modelos en biología &mdash; Tarea 2"
+author: "Hernando Diaz"
+date: "2023/05/10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Cada grupo debe responder las tres preguntas. El resultado debe ser un documento *R-markdown*. Use este archivo como base para su tarea.
+
+## 1. Modelo de Lotka Volterra
+
+Considere el modelo 
+$$
+\begin{align}
+	  \frac{d x_1(t)}{dt}= &r_1x_1\left[1-\frac{x_1(t)+\alpha_{12}x_2(t)}{K_1}\right]\\
+	  \frac{d x_2(t)}{dt}= &r_2x_2\left[1-\frac{x_2(t)+\alpha_{21}x_1(t)}{K_2}\right]
+\end{align}
+$$
+donde $x_1$ y $x_2$ representan dos poblaciones que comparten un ecosistema. Las variables $x_1$ y $x_2$ pueden representar los tamaños de las dos poblaciones en términos absolutos. 
+
+El modelo representado por las ecuaciones anteriores se denomina modelo de Volterra-Lotka y representa muchas relaciones posibles, según sean los signos de $\alpha_{12}$ y $\alpha_{21}$, como se muestra a continuación:
+
+| $\alpha_{12}$ | $\alpha_{21}$ | Tipo de relación         |
+|---------------|---------------|--------------------------|
+| $-$           | $-$           | Mutualismo               |
+| $-$           | $0$           | Comensal                 |
+| $0$           | $-$           | Comensal                 |
+| $+$           | $-$           | Parasitismo              |
+| $-$           | $+$           | Parasitismo              |
+| $+$           | $+$           | Competencia              |
+
+Cada grupo debe seleccionar dos de estos casos, escoger unos valores razonables de los parámetros  y responder las preguntas a continuación para cada uno de estos casos.
+
+```{r}
+
+library(deSolve)
+library(ggplot2)
+
+simulate_LV <- function(r1, r2, a1, a2, K1, K2, X, Y) {
+  params <- c(r1=r1, r2=r2, a1=a1, a2=a2, K1=K1, K2=K2)
+  state <- c(X=X, Y=Y)
+  
+  LV <- function(t, state, params) {
+    with(as.list(c(state, params)), {
+      dX = r1 * X * (1 - ((X + a1 * Y) / K1))
+      dY = r2 * Y * (1 - ((Y + a2 * X) / K2))
+      list(c(dX, dY))
+    })
+  }
+  
+  times <- seq(0, 100, by=0.01)
+  
+  out <- as.data.frame(ode(y = state, times=times, func=LV, parms=params))
+  
+  ggplot(out, aes(x = time)) +
+    geom_line(aes(y = X, color = "X")) +
+    geom_line(aes(y = Y, color = "Y")) +
+    xlab("Time") +
+    ylab("Population Size") +
+    scale_color_manual(values = c("X" = "blue", "Y" = "red"))
+}
+
+```
+
+### Mutualismo
+
+``` {r}
+
+simulate_LV(r1 = 0.8, r2 = 0.6, a1 = -0.2, a2 = -0.2, K1 = 50, K2 = 50, X = 70, Y = 25)
+
+```
+### Competencia
+
+``` {r}
+
+simulate_LV(r1 = 0.5, r2 = 0.4, a1 = 0.6, a2 = 0.4, K1 = 50, K2 = 60, X = 50, Y = 30)
+
+```
+
+* Haga una interpretación biológica de cada uno de los parámetros del modelo.
+* Describa qué es lo que representan los diferentes términos de las ecuaciones diferenciales.
+* Considere un caso en el cual una de las poblaciones se extingue (por ejemplo $x_2$) y analice el comportamiento asintótico (en el límite cuando $t\to \infty$) de la otra. Cuál es el tamaño de la población en condiciones estacionarias $\lim_{t\to\infty} x_1(t)=:\bar{x}_1$? Analice cómo se afecta el valor de $\bar{x}_1$ con cada uno de los parámetros. Para esto, haga simulaciones con valores iniciales $x_1^0>\bar{x}_1$ y también $x_1^0<\bar{x}_1$. 
+* Ahora introduzca la segunda población. Observe que las soluciones se aproximan a valores constantes, llamados puntos de equilibrio (llámelos $\bar{x}_1$ y $\bar{x}_2$). Encuentre los puntos de equilibrio para cuatro combinaciones de los parámetros  $\alpha_{12}$ y $\alpha_{21}$. Observe el efecto de estos parámetros sobre los valores estacionarios $\bar{x}_1$ y $\bar{x}_2$.
+* A continuación, evalúe el efecto de los parámetros $r_1$ y $r_2$ sobre la respuesta del modelo.
+*  Analice la estabilidad de los puntos de equilibrio; para ello suponga varias condiciones iniciales ligeramente diferentes del punto de equilibrio (por encima y por debajo de los valores de equilibrio) y observe el comportamiento de las soluciones. El equilibrio es estable (en realidad, *asintóticamente estable*) si las soluciones ligeramente diferentes del equilibrio resultan en trayectorias que "regresan" a éste. En caso contrario es inestable.
+
+
+## 2. Modelos de tiempo discreto
+
+En este problema consideramos un modelo de interacción Huesped-Parasitoide, usada con frecuencia en control biológico. Se trata de un modelo de la forma
+$$
+\begin{align*}
+N_{t+1} & = \frac{\lambda N_t e^{−a P_t}}{1 + d N_t}\\
+P_{t+1} &= c N_t(1 − e^{−a Pt})
+\end{align*}
+$$
+
+Este modelo **Huesped - Parasitoide**, es conocido como Nicholson-Bailey Modificado, para el cual hemos definido
+
+- $N_t$: Densidad (número) de huéspedes
+- $P_t$: Densidad (número) de parásitos
+- $\lambda$: Tasa de reproducción del huésped
+- $a$: Área donde el parasitoide busca huéspedes.
+- $c$: No. promedio de huevos viables en un huésped
+- $d$: Capacidad de carga del ecosistema para huéspedes
+
+Vamos a analizar el modelo de Nicholson-Bailey y estudiaremos  la estabilidad / inestabilidad del punto de equilibrio. La dinámica de las poblaciones está dada por las ecuaciones de Nicholson-Bailey modificadas:
+$$
+\begin{align*}
+N_{t+1}&=\dfrac{\lambda\,N_t\,e^{-a\,P_t}}{1+d\,N_t}\\[2mm]
+P_{t+1}&=c\,N_t(1-e^{-a\,P_t})
+\end{align*}
+$$
+
+
+* Simule las respuestas y haga una interpretación biológica del modelo y de sus resultados. Evalúe el efecto de cada uno de los parámetros sobre el equilibrio.
+* Haga una interpretación biológica de cada uno de los parámetros incluidos en el modelo.
+* Para dos de los casos cuyos parámetros se muestran en la siguiente tabla,
+
+|$a$|$\lambda$|$c$|$d$|$N_0$|$P_0$|
+|-----|----|----|----|----|----|
+|0.5|9.6|2.5|2.7|1.06|2.04|
+|0.4|8.7|5.5|4.7|0.27|2.04|
+|0.4|8.8|4.5|4.8|0.28|2.09|
+|0.4|8.2|3.9|2.9|0.40|2.09|
+|0.068|2.0|2.35|50|25.0|5.00|
+
+- Haga una simulación, con las condiciones iniciales dadas en la tabla.
+- Describa el comportamiento dinámico de las poblaciones
+- Analice el punto de equilibrio y su estabilidad
+- Considere otras condiciones iniciales y observe si la dinámica sufre modificaciones
+- Escoja dos de los parámetros del modelo y haga variaciones de $\pm 10$ % en cada uno por separado y observe cómo se modifica el comportamiento o los valores de equilibrio.
+
+## 3. Modelo de epidemia
+
+Por último, vamos a usar un modelo de epidemia (el mismo SIR que vimos en clase) para estudiar algunos aspectos simples asociados con un brote. El modelo usado es (despreciando tiempo de incubación):
+$$
+\begin{align*}
+	  \frac{d S(t)}{dt}&= -\beta\, S\, I\\
+	  \frac{d I(t)}{dt}&= \beta\, S\, I-\gamma\,I\\
+	  \frac{d R(t)}{dt}&= \gamma\,I
+\end{align*}
+$$
+donde $\gamma=1/T$ siendo $T el número promedio de días que una persona es contagiosa. $\beta$ se calcula a partir de un parámetro llamado *número básico de reproducción*:
+$\beta = R_0/T$. Para efectos de la simulación, es mejor usar valores de proporción de la población; por lo tanto, recomiendo usar como valores iniciales esos números. Suponga que la población es de un millón de personas y el brote comienza con una sola contagiada ($I(0) = 1/1000000$ es la fracción). Todos los demás ($S(0) = 999999/1000000$ es la fracción) son suceptibles y $R(0)=0$.
+
+* Escoja un valor de $R_0\in [1,1.4]$ y calcule el valor de $\beta$ correspondiente. Seleccione también un valor para $T\in[1,5]$ y uno para la letalidad (caracterizada por el IFR ---Infection Fatality Ratio--- que es la fracción de los infectados que mueren por causa de la enfermedad). Escoja para este valor un número entre 0.010 y 0.025.
+
+* Simule la dinámica del brote y determine el pico máximo de infectados y el momento cuando este se produce.
+* ¿Cuál es el número de muertos como resultado del brote? (Puede ayudar usar el comando `tail(out,1)` en el *script* que ya usamos).
+* ¿Qué es más grave, desde el punto de vista de los muertos totales, una versión diferente de la enfermedad que es 40% más transmisible o una que es 40% más letal? Y, desde el punto de vista del pico de la epidemia?
+* Usted, ¿qué considera que sería necesario agregarle al modelo para tener en cuenta el período de incubación durante el cual una persona infectada no es infecciosa (generalmente se le llama a este estado *Expuesto*)?
+

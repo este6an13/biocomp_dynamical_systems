@@ -1,0 +1,22 @@
+---
+title: Presentación Personal
+output: html_document
+date: "2023-05-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Hola, mi nombre es Diego Esteban
+
+Estudio Ingeniería de Sistemas y Computación y estoy cursando actualmente mi novena matrícula. 
+
+Me apasiona aprender acerca del universo y la naturaleza y por eso inscribí esta asignatura de Biología Computacional. Uno de los temas que me motivó a inscribir la materia fue precisamente el de sistemas dinámicos. Me parece interesante esa relación de la biología con la física.
+
+De mi carrera me gusta mucho la computación teórica, la arquitectura de software, el aprendizaje de máquina y los grafos.
+
+Espero continuar aprendiendo mucho en la asignatura,
+
+Gracias :)
+
