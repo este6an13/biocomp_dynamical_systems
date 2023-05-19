@@ -35,59 +35,279 @@ El modelo representado por las ecuaciones anteriores se denomina modelo de Volte
 
 Cada grupo debe seleccionar dos de estos casos, escoger unos valores razonables de los parámetros  y responder las preguntas a continuación para cada uno de estos casos.
 
+### Implementación del modelo:
+
 ```{r}
 
 library(deSolve)
 library(ggplot2)
+library(gridExtra)
 
-simulate_LV <- function(r1, r2, a1, a2, K1, K2, X, Y) {
-  params <- c(r1=r1, r2=r2, a1=a1, a2=a2, K1=K1, K2=K2)
-  state <- c(X=X, Y=Y)
+simulate_LV <- function(r1, r2, a12, a21, K1, K2, x1, x2, tmax) {
+  params <- c(r1=r1, r2=r2, a12=a12, a21=a21, K1=K1, K2=K2)
+  state <- c(x1=x1, x2=x2)
   
   LV <- function(t, state, params) {
     with(as.list(c(state, params)), {
-      dX = r1 * X * (1 - ((X + a1 * Y) / K1))
-      dY = r2 * Y * (1 - ((Y + a2 * X) / K2))
-      list(c(dX, dY))
+      dx1 = r1 * x1 * (1 - ((x1 + a12 * x2) / K1))
+      dx2 = r2 * x2 * (1 - ((x2 + a21 * x1) / K2))
+      list(c(dx1, dx2))
     })
   }
   
-  times <- seq(0, 100, by=0.01)
+  times <- seq(0, tmax, by=0.01)
   
   out <- as.data.frame(ode(y = state, times=times, func=LV, parms=params))
   
   ggplot(out, aes(x = time)) +
-    geom_line(aes(y = X, color = "X")) +
-    geom_line(aes(y = Y, color = "Y")) +
+    geom_line(aes(y = x1, color = "x1")) +
+    geom_line(aes(y = x2, color = "x2")) +
     xlab("Time") +
     ylab("Population Size") +
-    scale_color_manual(values = c("X" = "blue", "Y" = "red"))
+    scale_color_manual(values = c("x1" = "blue", "x2" = "red"))
+  
 }
 
 ```
 
-### Mutualismo
+### Ejemplos: Mutualismo y Competencia:
+
+#### Mutualismo
 
 ``` {r}
 
-simulate_LV(r1 = 0.5, r2 = 0.2, a1 = -0.5, a2 = -0.8, K1 = 100, K2 = 120, X = 20, Y = 100)
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
 
 ```
-### Competencia
+
+#### Competencia
 
 ``` {r}
 
-simulate_LV(r1 = 0.5, r2 = 0.2, a1 = 1.2, a2 = 0.8, K1 = 100, K2 = 120, X = 50, Y = 30)
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = 1.2, a21 = 1.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax=200)
 
 ```
 
 * Haga una interpretación biológica de cada uno de los parámetros del modelo.
 * Describa qué es lo que representan los diferentes términos de las ecuaciones diferenciales.
+
+### Interpretación biológica y descripción de los parámetros del modelo:
+
+
 * Considere un caso en el cual una de las poblaciones se extingue (por ejemplo $x_2$) y analice el comportamiento asintótico (en el límite cuando $t\to \infty$) de la otra. Cuál es el tamaño de la población en condiciones estacionarias $\lim_{t\to\infty} x_1(t)=:\bar{x}_1$? Analice cómo se afecta el valor de $\bar{x}_1$ con cada uno de los parámetros. Para esto, haga simulaciones con valores iniciales $x_1^0>\bar{x}_1$ y también $x_1^0<\bar{x}_1$. 
+
+
+### Caso en el que $x_2$ se extingue:
+
+``` {r}
+
+simulate_LV(r1 = 0.1, r2 = 0.4, 
+            a12 = 1.2, a21 = 1.3, 
+            K1 = 100, K2 = 50, 
+            x1 = 50, x2 = 70, 
+            tmax=200)
+
+```
+
+El valor estacionario $\bar{x}_1=100$ corresponde con el valor de capacidad de carga de la población $x_1$, es decir $K_1=100$.
+
+### Simulación con $x_1^0 > \bar{x}_1$, $x_1^0=120$:
+
+``` {r}
+
+simulate_LV(r1 = 0.1, r2 = 0.4, 
+            a12 = 1.2, a21 = 1.3, 
+            K1 = 100, K2 = 50, 
+            x1 = 120, x2 = 70, 
+            tmax=200)
+
+```
+
+### Simulación con $x_1^0 < \bar{x}_1$, $x_1^0=80$:
+
+``` {r}
+
+simulate_LV(r1 = 0.1, r2 = 0.4, 
+            a12 = 1.2, a21 = 1.3, 
+            K1 = 100, K2 = 50, 
+            x1 = 80, x2 = 70, 
+            tmax=200)
+
+```
+
+Observamos que la población $x_1$ se estabiliza en el valor $\bar{x}_1=K_1$. La población $x_2$ se extingue en ambos casos.
+
+
 * Ahora introduzca la segunda población. Observe que las soluciones se aproximan a valores constantes, llamados puntos de equilibrio (llámelos $\bar{x}_1$ y $\bar{x}_2$). Encuentre los puntos de equilibrio para cuatro combinaciones de los parámetros  $\alpha_{12}$ y $\alpha_{21}$. Observe el efecto de estos parámetros sobre los valores estacionarios $\bar{x}_1$ y $\bar{x}_2$.
+
+
+### Simulación en la que $x_2$ no se extingue:
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+```
+
+Los puntos de equilibrio son $\bar{x}_1=130$ y $\bar{x}_2=145$.
+
+
+### Simulaciones con cuatro combinaciones de $\alpha_{12}$ y $\alpha_{21}$:
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.5, a21 = -0.5, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+```
+Si se incrementa la magnitud de $\alpha_{12}$ y $\alpha_{21}$ de $0.2$ a $0.5$, los valores estacionarios se incrementan.
+
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.05, a21 = -0.05, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+```
+
+Si se disminuye la magnitud de $\alpha_{12}$ y $\alpha_{21}$ de $0.2$ a $0.05$, los valores estacionarios disminuyen.
+
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -1.5, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+```
+Si se incrementa la magnitud de $\alpha_{12}$ de $0.2$ a $1.5$ y $\alpha_{21}$ se mantiene igual, se observa que ambos valores estacionarios se incrementan. La diferencia entre los puntos estacionarios es: de aproximadamente $200$.
+
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -2.5, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+```
+
+
+Si se incrementa la magnitud de $\alpha_{12}$ de $0.2$ a $2.5$ y $\alpha_{21}$ se mantiene igual, se observa que ambos valores estacionarios se incrementan aún más. Pero esta vez, la diferencia entre los puntos estacionarios es aún mayor: de poco más de $500$.
+
+
 * A continuación, evalúe el efecto de los parámetros $r_1$ y $r_2$ sobre la respuesta del modelo.
+
+
+### Simulaciones con diferentes valores de $r_1$ y $r_2$:
+
+Caso en el que las condiciones de ambas poblaciones son iguales y las tasas de crecimiento $r_1$ y $r_2$ también. En este ejemplo $r_1=50=r_2$.
+
+``` {r}
+
+simulate_LV(r1 = 0.5, r2 = 0.5, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 100, 
+            x1 = 50, x2 = 50, 
+            tmax = 200)
+
+```
+
+
+Se incrementará $r_1$ y se dejará fijo a $r_2$:
+
+``` {r}
+
+simulate_LV(r1 = 2.5, r2 = 0.5, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 100, 
+            x1 = 50, x2 = 50, 
+            tmax = 100)
+
+```
+Observamos que la población $x_1$ alcanza más rápidamente el punto estacionario.
+
+Ahora, haremos a $r_2$ más pequeño.
+
+``` {r}
+
+simulate_LV(r1 = 2.5, r2 = 0.1, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 100, 
+            x1 = 50, x2 = 50, 
+            tmax = 100)
+
+```
+
+Si además se hace a $r_2$ más pequeño, vemos que la diferencia del tiempo que les toma a ambas poblaciones llegar al punto estacionario, es aún mayor, llegando a ser poco más de $50$ unidades de tiempo.
+
+
 *  Analice la estabilidad de los puntos de equilibrio; para ello suponga varias condiciones iniciales ligeramente diferentes del punto de equilibrio (por encima y por debajo de los valores de equilibrio) y observe el comportamiento de las soluciones. El equilibrio es estable (en realidad, *asintóticamente estable*) si las soluciones ligeramente diferentes del equilibrio resultan en trayectorias que "regresan" a éste. En caso contrario es inestable.
 
+### Analizando la estabilidad de los puntos de equilibrio:
+
+Se escogerá la simulación para la que $\bar{x}_1=130$ y $\bar{x}_2=145$.
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 50, x2 = 10, 
+            tmax = 200)
+
+
+```
+
+Caso en el que $x_1^0>\bar{x}_1$ y $x_2^0>\bar{x}_2$:
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 150, x2 = 165, 
+            tmax = 200)
+
+
+```
+Observamos que las trayectorias regresan a los puntos de equilibrio. Es decir, son puntos de equilibrio estables.
+
+Ahora intentamos con $x_1^0<\bar{x}_1$ y $x_2^0<\bar{x}_2$:
+
+``` {r}
+
+simulate_LV(r1 = 1.0, r2 = 0.3, 
+            a12 = -0.2, a21 = -0.2, 
+            K1 = 100, K2 = 120, 
+            x1 = 110, x2 = 125, 
+            tmax = 200)
+
+
+```
+
+Observamos que las trayectorias regresan a los puntos de equilibrio. Es decir, seguimos confirmando que los puntos de equilibrio son estables.
 
 ## 2. Modelos de tiempo discreto
 
