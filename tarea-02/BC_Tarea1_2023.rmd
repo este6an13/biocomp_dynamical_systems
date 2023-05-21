@@ -35,14 +35,14 @@ El modelo representado por las ecuaciones anteriores se denomina modelo de Volte
 
 Cada grupo debe seleccionar dos de estos casos, escoger unos valores razonables de los parámetros  y responder las preguntas a continuación para cada uno de estos casos.
 
-### Implementación del modelo:
+### Implementación del modelo Lotka-Volterra:
 
 ```{r}
 
 library(deSolve)
 library(ggplot2)
-library(gridExtra)
 
+# Lotka-Volterra
 simulate_LV <- function(r1, r2, a12, a21, K1, K2, x1, x2, tmax) {
   params <- c(r1=r1, r2=r2, a12=a12, a21=a21, K1=K1, K2=K2)
   state <- c(x1=x1, x2=x2)
@@ -335,10 +335,116 @@ N_{t+1}&=\dfrac{\lambda\,N_t\,e^{-a\,P_t}}{1+d\,N_t}\\[2mm]
 P_{t+1}&=c\,N_t(1-e^{-a\,P_t})
 \end{align*}
 $$
+### Implementación del modelo Nicholson-Bailey:
+
+```{r}
+
+library(deSolve)
+library(ggplot2)
+
+# Nicholson-Bailey
+simulate_NB <- function(L, a, c, d, N, P, tmax) {
+  params <- c(L=L, a=a, c=c, d=d, N=N, P=P)
+  state <- c(N=N, P=P)
+  
+  NB <- function(t, state, params) {
+    with(as.list(c(state, params)), {
+      N = (L * N * exp(-a * P)) # / (1 + d * N)
+      P = c * N * (1 - exp(-a * P))
+      list(c(N, P))
+    })
+  }
+  
+  times <- seq(0, tmax, by=0.01)
+  
+  out <- as.data.frame(ode(y = state, times=times, func=NB, parms=params, method="iteration"))
+  
+  ggplot(out, aes(x = time)) +
+      geom_line(aes(y = N, color = "N")) +
+      geom_line(aes(y = P, color = "P")) +
+      xlab("Time") +
+      ylab("Population Size") +
+      scale_color_manual(values = c("N" = "aquamarine3", "P" = "chocolate2"))
+  
+}
+
+```
+
+* Simule las respuestas y haga una interpretación biológica del modelo y de sus resultados.
+
+### Simulación e interpretación biológica del modelo:
+
+```{r}
+
+simulate_NB(L=5.2, a=0.5, c=5.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+
+$\lambda$ es la tasa de crecimiento del huesped.
+$a$ es la tasa de parasitismo: tasa a la que el parásito ataca e infecta el huesped.
+$c$ es la eficiencia del parasitismo: tasa a la que el parásito aprovecha satisfactoriamente el huesped por su propia reproducción.
+$d$ representa el impacto de la densidad de la población huesped en su propio crecimiento y puede capturar factores como la limitación de recursos, la competencia o las interacciones intraespecíficas dentro de la población huesped
 
 
-* Simule las respuestas y haga una interpretación biológica del modelo y de sus resultados. Evalúe el efecto de cada uno de los parámetros sobre el equilibrio.
+Evalúe el efecto de cada uno de los parámetros sobre el equilibrio.
+
+
+### Evaluando el efecto de cada parámetro sobre el equilibrio:
+
+#### Tasa de crecimiento $\lambda$ mayor a la tasa de eficiencia $c$:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.5, c=1.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+#### Tasa de crecimiento $\lambda$ menor a la tasa de eficiencia $c$:
+
+```{r}
+
+simulate_NB(L=1.0, a=0.5, c=2.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+
+#### Tasa de crecimiento $\lambda$ y tasa de eficiencia $c$ con el mismo valor:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.5, c=2.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+#### Variando los valores de la tasa de parasitismo $a$:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.9, c=2.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+```{r}
+
+simulate_NB(L=2.0, a=0.1, c=2.0, d=0.5, N=2, P=3, tmax=0.5)
+
+```
+Una menor tasa de parasitismo parece incrementar los puntos de equilibrio.
+
+#### Variando los valores de la dependencia de densidad $d$:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.5, c=2.0, d=0.1, N=2, P=3, tmax=0.5)
+
+```
+
+```{r}
+
+simulate_NB(L=2.0, a=0.5, c=2.0, d=0.9, N=2, P=3, tmax=0.5)
+
+```
 * Haga una interpretación biológica de cada uno de los parámetros incluidos en el modelo.
+
+## Interpretación biológica de los parámetros
+
+
 * Para dos de los casos cuyos parámetros se muestran en la siguiente tabla,
 
 |$a$|$\lambda$|$c$|$d$|$N_0$|$P_0$|
@@ -352,12 +458,119 @@ $$
 - Haga una simulación, con las condiciones iniciales dadas en la tabla.
 - Describa el comportamiento dinámico de las poblaciones
 - Analice el punto de equilibrio y su estabilidad
+
+### Simulaciones con los valores de la tabla:
+
+#### Usando los valores de la fila 2:
+
+```{r}
+
+simulate_NB(L=8.7, a=0.4, c=5.5, d=4.7, N=0.27, P=2.04, tmax=0.5)
+
+```
+#### Tomando valores iniciales para $N$ y $P$ ligeramente mayores:
+
+El equilibrio se alcanza antes, sin embargo siguen siendo los mismos, es decir que se puede decir que es estable.
+
+```{r}
+
+simulate_NB(L=8.7, a=0.4, c=5.5, d=4.7, N=0.47, P=2.24, tmax=0.5)
+
+```
+
+### Usando los valores de la fila 5:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.35, d=50, N=25, P=5, tmax=0.5)
+
+```
+
+#### Tomando valores iniciales para $N$ y $P$ ligeramente menores:
+
+El equilibrio se alcanza antes, sin embargo siguen siendo los mismos, es decir que se puede decir que es estable.
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.35, d=50, N=22, P=2, tmax=0.5)
+
+```
+El equilibrio se alcanza después, sin embargo siguen siendo los mismos, es decir que se puede decir que es estable.
+
 - Considere otras condiciones iniciales y observe si la dinámica sufre modificaciones
+
+### Variando las condiciones iniciales $N$ y $P$:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.35, d=50, N=35, P=2, tmax=0.5)
+
+```
+
+Al cambiar ligeramente los valores de las condiciones iniciales, la dinámica sufre algunas modificaciones pero se alcanzan los mismos puntos de equilibrio.
+
+Sin embargo, si se modifican para que el número de parásitos sea tres veces mayor que la población huesped, se obtiene una dinpamica totalmente diferente. Además, la población de parásitos comienza a diverger.
+
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.35, d=50, N=25, P=75, tmax=0.85)
+
+```
+
 - Escoja dos de los parámetros del modelo y haga variaciones de $\pm 10$ % en cada uno por separado y observe cómo se modifica el comportamiento o los valores de equilibrio.
+
+### Variando los parámetros $\lambda$ y $c$ $\pm 10$ %:
+
+#### Modelo sin variación:
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.35, d=50, N=25, P=5, tmax=0.5)
+
+```
+
+#### Incrementando $\lambda$ un $10$%:
+
+El equilibrio aumenta ligeramente para el huesped.
+
+```{r}
+
+simulate_NB(L=2.2, a=0.068, c=2.35, d=50, N=25, P=5, tmax=0.5)
+
+```
+#### Incrementando $c$ un $10$%:
+
+El equilibrio disminuye ligeramente para ambas especies.
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.585, d=50, N=25, P=5, tmax=0.5)
+
+```
+#### Disminuyendo $\lambda$ un $10$%:
+
+El equilibrio disminuye ligeramente para el huesped.
+
+```{r}
+
+simulate_NB(L=1.8, a=0.068, c=2.35, d=50, N=25, P=5, tmax=0.5)
+
+```
+#### Disminuyendo $c$ un $10$%:
+
+El equilibrio aumenta ligeramente para el parásito.
+
+```{r}
+
+simulate_NB(L=2.0, a=0.068, c=2.115, d=50, N=25, P=5, tmax=0.5)
+
+```
 
 ## 3. Modelo de epidemia
 
 Por último, vamos a usar un modelo de epidemia (el mismo SIR que vimos en clase) para estudiar algunos aspectos simples asociados con un brote. El modelo usado es (despreciando tiempo de incubación):
+
 $$
 \begin{align*}
 	  \frac{d S(t)}{dt}&= -\beta\, S\, I\\
@@ -365,13 +578,103 @@ $$
 	  \frac{d R(t)}{dt}&= \gamma\,I
 \end{align*}
 $$
-donde $\gamma=1/T$ siendo $T el número promedio de días que una persona es contagiosa. $\beta$ se calcula a partir de un parámetro llamado *número básico de reproducción*:
+
+donde $\gamma=1/T$ siendo $T$ el número promedio de días que una persona es contagiosa. $\beta$ se calcula a partir de un parámetro llamado *número básico de reproducción*:
 $\beta = R_0/T$. Para efectos de la simulación, es mejor usar valores de proporción de la población; por lo tanto, recomiendo usar como valores iniciales esos números. Suponga que la población es de un millón de personas y el brote comienza con una sola contagiada ($I(0) = 1/1000000$ es la fracción). Todos los demás ($S(0) = 999999/1000000$ es la fracción) son suceptibles y $R(0)=0$.
 
 * Escoja un valor de $R_0\in [1,1.4]$ y calcule el valor de $\beta$ correspondiente. Seleccione también un valor para $T\in[1,5]$ y uno para la letalidad (caracterizada por el IFR ---Infection Fatality Ratio--- que es la fracción de los infectados que mueren por causa de la enfermedad). Escoja para este valor un número entre 0.010 y 0.025.
 
+
+### Implementación del modelo SIR:
+
+```{r}
+
+library(deSolve)
+library(ggplot2)
+
+# Modelo SIR
+simulate_SIR <- function(R0, T, S, I, R, F, IFR, tmax) {
+  
+  B <- R0 / T
+  G <- 1.0 / T
+  
+  params <- c(B=B, G=G, IFR=IFR)
+  state <- c(S=S, I=I, R=R, F=F, RF=R+F) # recuperados y fatalidades iniciales son cero
+  
+  SIR <- function(t, state, params) {
+    with(as.list(c(state, params)), {
+      dS = -B * S * I
+      dI = B * S * I - G * I
+      dR = G * I * (1.0 - IFR) # recuperados
+      dF = G * I * IFR # fatalidades
+      dRF = dR + dF # recuperados + fatalidades combinados
+      list(c(dS, dI, dR, dF, dRF))
+    })
+  }
+  
+  times <- seq(0, tmax, by=0.01)
+  
+  out <- as.data.frame(ode(y = state, times=times, func=SIR, parms=params))
+  
+  fatalities <- tail(out, 1)
+  print(fatalities)
+  
+  ggplot(out, aes(x = time)) +
+      geom_line(aes(y = S, color = "Suceptibles")) +
+      geom_line(aes(y = I, color = "Infectados")) +
+      geom_line(aes(y = RF, color = "Recuperados + Fatalidades")) +
+      geom_line(aes(y = R, color = "Recuperados")) +
+      geom_line(aes(y = F, color = "Fatalidades")) +
+      xlab("Time") +
+      ylab("Population Size") +
+      scale_color_manual(values = c("Suceptibles" = "turquoise2", "Infectados" = "orangered", "Recuperados"="green3", "Fatalidades"="royalblue", "Recuperados + Fatalidades"="gray53"))
+
+  
+}
+
+```
+
+
 * Simule la dinámica del brote y determine el pico máximo de infectados y el momento cuando este se produce.
 * ¿Cuál es el número de muertos como resultado del brote? (Puede ayudar usar el comando `tail(out,1)` en el *script* que ya usamos).
+
+### Simulación con parámetros sugeridos;
+
+```{r}
+
+simulate_SIR(R0=2.0, T=3.0, S=999999/1000000, I=1.0/1000000, R=0.0, F=0.0, IFR=0.025, tmax=100)
+
+```
+El pico sobrepasa las 0.125 unidades de población y se presenta aproximadamente a las 40 unidades de tiempo.
+
+Al usar la función `tail(out, 1)` podemos ver que el número de fatalidades acumuladas es de $0.01992016$ unidades de población cuando se usa un $IFR$ de $0.025$.
+
+
 * ¿Qué es más grave, desde el punto de vista de los muertos totales, una versión diferente de la enfermedad que es 40% más transmisible o una que es 40% más letal? Y, desde el punto de vista del pico de la epidemia?
+
+
+### Simulación con $40$% más transmisibilidad:
+
+```{r}
+
+simulate_SIR(R0=2.8, T=3.0, S=999999/1000000, I=1.0/1000000, R=0.0, F=0.0, IFR=0.025, tmax=100)
+
+```
+El pico se alcanza antes de las 25 unidades de tiempo y sobrepasa las 0.25 unidades de población.
+
+El número de fatalidades acumuladas alcanza las $0.02312437$ unidades de población.
+
+### Simulación con $40$% más letalidad:
+
+```{r}
+
+simulate_SIR(R0=2.0, T=3.0, S=999999/1000000, I=1.0/1000000, R=0.0, F=0.0, IFR=0.035, tmax=100)
+
+```
+Aumentar la letalidad no parece incidir significativamente en cuándo se alcanza el pico ni la cantidad de infectados.
+
+El número de fatalidades si se incrementa significativamente y alcanza $0.02788822$ unidades de población.
+
+
 * Usted, ¿qué considera que sería necesario agregarle al modelo para tener en cuenta el período de incubación durante el cual una persona infectada no es infecciosa (generalmente se le llama a este estado *Expuesto*)?
 
